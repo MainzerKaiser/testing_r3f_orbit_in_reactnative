@@ -1,7 +1,6 @@
 import React, { Suspense, useRef, useCallback, useEffect, useState } from 'react';
 import { SafeAreaView, StyleSheet, Text, View,} from 'react-native';
 
-import Model from './src/components/cube_with_letters';
 import Chair from './src/components/chair';
 
 import { Canvas } from '@react-three/fiber/native';
@@ -14,30 +13,9 @@ import { Dimensions } from 'react-native';
 import Trigger from './src/components/Trigger';
 import Loader from './src/components/Loader';
 
-import { fetchAndParseXLSX, XLSXData } from './src/api/fetchQA'; 
 
 
 
-const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-const getRandomLetter = (usedLetters: Set<string>) => {
-  let randomLetter;
-  do {
-    const randomIndex = Math.floor(Math.random() * alphabet.length);
-    randomLetter = alphabet[randomIndex];
-  } while (usedLetters.has(randomLetter));
-
-  // Add the selected letter to the set of used letters
-  usedLetters.add(randomLetter);
-
-  return randomLetter;
-};
-  const generateLetters = (nCubes: number) => {
-  return Array.from({ length: nCubes }, () => {
-    const usedLettersForFace = new Set<string>();
-    return Array.from({ length: 6 }, () => getRandomLetter(usedLettersForFace));
-  });
-};
 
 
 
@@ -46,8 +24,6 @@ const Game: React.FC = () => {
   const { width, height } = Dimensions.get('window');
   const isPortrait = height > width;
 
-  const getVisibleLetters = useVisibleStore((state) => state.getVisibleLetters)
-  const visibleLetters=getVisibleLetters()
   const nCubes= useVisibleStore((state) => state.nCubes)
 
   const { updatecurrentletter, interactionStarted, setInteractionStarted } = useVisibleStore();
@@ -55,48 +31,11 @@ const Game: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [letters, setLetters] = useState<string[][]>([]);
   
-  
-  useEffect(() => {
-    // Generate letters only when the component mounts
-    const newLetters=generateLetters(nCubes)
-    // console.log(newLetters)
-    setLetters(newLetters);
-    // console.log("ncubes changed: ", newLetters)
-  }, [nCubes]);  
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const fileName = './src/assets/QA.xlsx'; // Replace with your actual file name
-        const data: XLSXData = await fetchAndParseXLSX(fileName);
-        if (data) {
-          console.log('Data received:', data);
-        } else {
-          console.log('Failed to fetch or parse XLSX.');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-      }
-    };
-
-    fetchData();
-  }, []);
-  // const handleCameraChangeWrapper = (event: any, index: number, letters: string[][]) => () => {
-  //   console.log("Wrapper")
-  //   handleCameraChange(event, index, letters);
-  // };
+ 
 
 
 
 
-  function ModelCall({ index }: { index: number }) {
-    return (
-      <Model
-        letters={letters[index]}
-        cubeindex={index}
-      />
-    );
-  }
 
   const handleCameraChange = useCallback((event: any, index: number, letters:string[][]) => {
     const { target } = event;
@@ -120,7 +59,6 @@ const Game: React.FC = () => {
     cameraDirection.normalize();
     const dotProducts = faces.map((faceDirection) => cameraDirection.dot(faceDirection));
     const mostVisibleFaceIndex = dotProducts.indexOf(Math.min(...dotProducts));
-    updatecurrentletter(index,letters[index][mostVisibleFaceIndex])
     // console.log(index)
 
     // console.log("i, c, l, d, Dir: ", index, cameraTargetPosition, letters[index][mostVisibleFaceIndex], dotProducts, cameraDirection)
@@ -156,42 +94,27 @@ const Game: React.FC = () => {
                   style={isPortrait ? styles.modelColumn : styles.modelRow}
                   {...events}
                 >
-
                     <Canvas key={index} ref={canvasRef} >
                       <OrbitControls
-                        // key leads to crypto error
                         key={index} 
-                        // ref={orbitControlsRef}
-                        // enabled={true}
-                        // target={cameraPositions[index]}
                         enableZoom={false}
                         enablePan={false}
                         dampingFactor={0.75}
                         enableRotate={true}
                         rotateSpeed={0.45}
                         onChange={(event) => handleCameraChange(event, index, letters)} 
-                        // onChange={(event) => {
-                          // console.log("Interaction changed");
-                          // setInteractionStarted(index, true);
-                          // handleCameraChange(event, index, letters)} 
-                        // }}
                         {...OrbitControls}
                       />
-                      {/* <directionalLight position={[1, 1, 1]} intensity={5} args={["red", 10]} /> */}
                       <directionalLight position={[-1, 1, 1]} intensity={4} args={["white", 10]}  />
                       <directionalLight position={[1, -1, 1]} intensity={5} args={["blue", 10]}  />
                       <directionalLight position={[-1, -1, 1]} intensity={3} args={["orange", 10]}  />
                       <directionalLight position={[1, 1, -1]} intensity={5} args={["white", 10]}  />
-                      {/* <directionalLight position={[-1, 1, -1]} intensity={2} args={["cyan", 10]}  /> */}
                       <directionalLight position={[1, -1, -1]} intensity={5} args={["yellow", 10]}  />
                       <directionalLight position={[-1, -1, -1]} intensity={7} args={["white", 10]}  />
                       <Suspense fallback={<Trigger setLoading={setLoading} />}>
-                          <ModelCall index={index}/>
-                        {/* <Chair /> */}
+                        <Chair />
                       </Suspense>
                     </Canvas>
-                    {/* </View> 
-                    </Pressable>*/}
                 </View> 
                 )
               })}
@@ -200,7 +123,6 @@ const Game: React.FC = () => {
         <View style={styles.bottomContainer}>
           <View style={styles.textContainer}>
             <Text style={styles.text}>
-              Your CubeWordle is: {visibleLetters.join('')}
             </Text>
           </View>
         </View>
